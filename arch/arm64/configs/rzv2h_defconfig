@@ -483,3 +483,49 @@ CONFIG_DEBUG_FS=y
 # CONFIG_SCHED_DEBUG is not set
 # CONFIG_FTRACE is not set
 CONFIG_MEMTEST=y
+
+# Merged from Tien's meta-renesas Yocto layer (rz-cmn/common/*.cfg,
+# rz-cmn/rzg2l-sbc/*.cfg) -- additive only, no existing value changed.
+# NVMe SSD support (nvme.cfg)
+CONFIG_BLK_DEV_NVME=y
+# USB-CAN adapters (usb-can.cfg)
+CONFIG_CAN_PEAK_USB=m
+CONFIG_CAN_GS_USB=m
+CONFIG_CAN_8DEV_USB=m
+CONFIG_CAN_EMS_USB=m
+CONFIG_CAN_ESD_USB=m
+CONFIG_CAN_ETAS_ES58X=m
+CONFIG_CAN_F81604=m
+CONFIG_CAN_KVASER_USB=m
+CONFIG_CAN_MCBA_USB=m
+CONFIG_CAN_UCAN=m
+# USB-serial adapters (usb-serial.cfg)
+CONFIG_USB_SERIAL=y
+CONFIG_USB_SERIAL_FTDI_SIO=m
+CONFIG_USB_SERIAL_CP210X=m
+CONFIG_USB_SERIAL_CH341=m
+CONFIG_USB_ACM=m
+CONFIG_USB_SERIAL_WWAN=m
+CONFIG_USB_SERIAL_OPTION=m
+# EDID firmware loading (firmware-edid.cfg)
+CONFIG_FIRMWARE_EDID=y
+# Drop commit hash from kernel version string (kernel-common.cfg)
+CONFIG_LOCALVERSION_AUTO=n
+# Wifi/BT stack shared by the rz-cmn machine image (rzg2l-sbc/laird.cfg)
+CONFIG_CRYPTO_ECDH=y
+CONFIG_BRCMFMAC=m
+CONFIG_BRCMUTIL=m
+CONFIG_BT=m
+CONFIG_BT_LE=y
+CONFIG_BT_RFCOMM=m
+CONFIG_BT_RFCOMM_TTY=y
+CONFIG_BT_HCIUART=n
+CONFIG_BT_HCIUART_BCM=n
+CONFIG_BT_HCIBTUSB=m
+CONFIG_BT_HCIBTUSB_BCM=y
+CONFIG_BT_MTK=m
+CONFIG_BT_RTL=m
+# I2C/HID input core, shared by the rz-cmn machine image (rzg2l-sbc/touch.cfg)
+CONFIG_I2C=y
+CONFIG_INPUT=y
+CONFIG_HID_MULTITOUCH=y
