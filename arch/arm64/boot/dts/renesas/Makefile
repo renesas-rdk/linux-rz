@@ -198,6 +198,10 @@ DTC_CPP_FLAGS_rzv2h-rdk-ver1 += -DREMOTEPROC
 DTC_FLAGS_rzv2h-rdk-ver1 += -@
 dtb-$(CONFIG_ARCH_R9A09G057) += rzv2h-rdk-ver1.dtb
 
+DTC_CPP_FLAGS_rzv2h-rdk-ver101 += -DREMOTEPROC
+DTC_FLAGS_rzv2h-rdk-ver101 += -@
+dtb-$(CONFIG_ARCH_R9A09G057) += rzv2h-rdk-ver101.dtb
+
 subdir-y += overlays
 
 dtb-$(CONFIG_ARCH_R9A09G057) += rzv2-evk-cn15-emmc.dtbo

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
 /*
- * Device Tree Source for the RZ/V2H RDK ver1 board
+ * Device Tree Source for the RZ/V2H RDK ver1 board (8GB variant)
  *
  * Copyright (C) 2025 Renesas Electronics Corp.
  */
@@ -34,8 +34,8 @@
 #define PCIE_MODE_SEL           0
 
 / {
-    model = "Renesas RDK ver1 based on r9a09g057h4";
-    compatible = "renesas,r9a09g057h4-rdk-ver1", "renesas,r9a09g057h4", "renesas,r9a09g057";
+    model = "Renesas RDK ver1 based on r9a09g057h4 (8GB)";
+    compatible = "renesas,r9a09g057h4-rdk-ver101", "renesas,r9a09g057h4", "renesas,r9a09g057";
 
     aliases {
         serial0 = &scif;
@@ -53,11 +53,6 @@
         device_type = "memory";
         /* first 128MB is reserved for secure area. */
         reg = <0x0 0x48000000 0x1 0xF8000000>;
-    };
-
-    memory@240000000 {
-        device_type = "memory";
-        reg = <0x2 0x40000000 0x2 0x00000000>;
     };
 
     reserved-memory {
