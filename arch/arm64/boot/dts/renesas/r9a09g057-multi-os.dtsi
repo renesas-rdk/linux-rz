@@ -146,14 +146,14 @@
 		status = "okay";
 	};
 
-	receiver@104800c0 {
+	receiver@104800C0 {
 		compatible = "receiver";
 		interrupt-parent = <&gic>;
 		interrupts = <0x0 0x17f 0x4>;
 		status = "okay";
 	};
 
-	receiver@104800e0 {
+	receiver@104800E0 {
 		compatible = "receiver";
 		interrupt-parent = <&gic>;
 		interrupts = <0x0 0x180 0x4>;
