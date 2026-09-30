@@ -751,8 +751,9 @@
 };
 
 &drp1 {
-    memory-region = <&codec0>;
-    memory-oca-region = <&opencva0>;
+    /* Where U-Boot loads Codec_Bin.bin / OpenCV_Bin.bin (codaddr/ocaaddr) */
+    memory-region = <&drp_codec>;
+    memory-oca-region = <&opencva_reserved>;
 
     status = "okay";
 };
