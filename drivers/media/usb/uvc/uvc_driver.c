@@ -14,6 +14,7 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/usb.h>
+#include <linux/usb/hcd.h>
 #include <linux/usb/quirks.h>
 #include <linux/usb/uvc.h>
 #include <linux/videodev2.h>
@@ -2038,6 +2039,12 @@ int uvc_register_video_device(struct uvc_device *dev,
 	ret = uvc_queue_init(queue, type);
 	if (ret)
 		return ret;
+
+	/*
+	 * The dma-contig allocator (allocators=1) needs a DMA capable device to
+	 * allocate from; use the host controller's. vmalloc ignores it.
+	 */
+	queue->queue.dev = bus_to_hcd(dev->udev->bus)->self.sysdev;
 
 	/* Register the device with V4L. */
 
