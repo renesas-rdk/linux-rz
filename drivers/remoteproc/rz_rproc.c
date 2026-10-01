@@ -718,6 +718,35 @@ static u32 rzv2h_cr8_halt_bit(struct rz_rproc_pdata *pdata)
 	return pdata->core == RZV2H_CR8_CORE0_NUMBER ? BIT(0) : BIT(1);
 }
 
+/*
+ * True if this CR8 core is really executing: cluster clocks supplied, cluster
+ * resets released and the core's nCPUHALT released. The cr8_ddr marker alone
+ * is not enough: DDR keeps its content across a board reset, and after reset
+ * the boot stages leave the cluster clocked and out of reset but with both
+ * CPUs held by nCPUHALT (CR8_CONFIG1 = 0), so a stale marker would make a
+ * halted core look "detached".
+ *
+ * A core started by a boot stage releases nCPUHALT (U-Boot "cr80start" writes
+ * CR8_CONFIG1 = 3) and is detected. A core that a JTAG debugger restarted
+ * through its debug logic keeps nCPUHALT = 0 and is reported offline: no CPG
+ * register tells it apart from a halted core, and reading the CR8 debug
+ * registers through the CoreSight window (0x1F810000) from the A55 hangs the
+ * SoC.
+ */
+static bool rzv2h_cr8_core_released(struct rz_rproc_pdata *pdata)
+{
+	u32 clkmon, rstmon0, rstmon1, config1;
+
+	regmap_read(pdata->cpg_regmap, RZV2H_CPG_CLKMON_0, &clkmon);
+	regmap_read(pdata->cpg_regmap, RZV2H_CPG_RSTMON_0, &rstmon0);
+	regmap_read(pdata->cpg_regmap, RZV2H_CPG_RSTMON_1, &rstmon1);
+	regmap_read(pdata->cpg_regmap, RZV2H_CPG_CR8_CONFIG1, &config1);
+
+	return (clkmon & 0x0003E000) == 0x0003E000 &&
+	       !(rstmon0 & 0xFFF00000) && !(rstmon1 & 0x1) &&
+	       (config1 & rzv2h_cr8_halt_bit(pdata));
+}
+
 static int rzv2h_start_cr8(struct rproc *rproc)
 {
 	struct rz_rproc_pdata *pdata = rproc->priv;
@@ -1051,7 +1080,7 @@ static int rz_rproc_check_running(struct platform_device *pdev,
 
 	*running = false;
 
-	/* RZ/V2H CR8: check the CR8 DDR marker written by firmware */
+	/* RZ/V2H CR8: DDR marker written by the firmware + core really released */
 	if (data->variant == RZ_VARIANT_RZV2H &&
 	    (pdata->core == RZV2H_CR8_CORE0_NUMBER ||
 	     pdata->core == RZV2H_CR8_CORE1_NUMBER)) {
@@ -1066,7 +1095,8 @@ static int rz_rproc_check_running(struct platform_device *pdev,
 		if (IS_ERR(ddr_cr8_base))
 			return PTR_ERR(ddr_cr8_base);
 
-		if (ioread32(ddr_cr8_base) != 0) {
+		if (ioread32(ddr_cr8_base) != 0 &&
+		    rzv2h_cr8_core_released(pdata)) {
 			*running = true;
 			/* The running core holds a cluster reference until stopped */
 			guard(mutex)(&rzv2h_cr8_cluster_lock);
