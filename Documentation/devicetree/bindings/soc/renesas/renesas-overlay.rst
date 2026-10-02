@@ -46,7 +46,7 @@ Examples (Current Overlays)
 - `rzg2l-sbc-1.0-ext-spi.dts`         -> `rzg2l-sbc-1.0-ext-spi.dtbo`
 - `rzg2l-sbc-1.0-ov5640.dts`          -> `rzg2l-sbc-1.0-ov5640.dtbo`
 - `rzv2h-rdk-can.dts`                 -> `rzv2h-rdk-can.dtbo`
-- `rzv2h-rdk-1.0-ext-spi.dts`         -> `rzv2h-rdk-1.0-ext-spi.dtbo`
+- `rzv2h-rdk-ext-spi.dts`             -> `rzv2h-rdk-ext-spi.dtbo`
 - `rzv2l-evk-1.0-cru-csi-ov5645.dts`  -> `rzv2l-evk-1.0-cru-csi-ov5645.dtbo`
 
 Guidelines

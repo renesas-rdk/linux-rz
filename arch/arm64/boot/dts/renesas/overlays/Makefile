@@ -16,8 +16,8 @@ dtb-y += rzv2l-evk-1.0-cru-csi-ov5645.dtbo
 
 # RZ/V2H RDK overlays
 dtb-y += rzv2h-rdk-can.dtbo
-dtb-y += rzv2h-rdk-1.0-ext-spi.dtbo
-dtb-y += rzv2h-rdk-1.0-audio-codec.dtbo
+dtb-y += rzv2h-rdk-ext-spi.dtbo
+dtb-y += rzv2h-rdk-audio-codec.dtbo
 
 # IMDT-V2H-SBC overlays
 dtb-y += imdt-v2h-sbc-1.0-dsi.dtbo
