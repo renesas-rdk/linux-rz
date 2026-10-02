@@ -19,260 +19,26 @@ static const struct rzg2l_cru_ip_format rzg2l_cru_ip_formats[] = {
 		.datatype = MIPI_CSI2_DT_YUV422_8B,
 		.format = V4L2_PIX_FMT_UYVY,
 		.icndmr = ICnDMR_YCMODE_UYVY,
-		.yuv = true,
-		.bpp = 2,
 		.fmt_types = V4L2_PIXEL_ENC_YUV,
 	},
 	{
 		.codes = {
-			MEDIA_BUS_FMT_SBGGR8_1X8,
+			MEDIA_BUS_FMT_UYVY8_1X16,
 		},
-		.format = V4L2_PIX_FMT_SBGGR8,
-		.datatype = MIPI_CSI2_DT_RAW8,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 1,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_BGBG,
+		.format = V4L2_PIX_FMT_NV16,
+		.datatype = MIPI_CSI2_DT_YUV422_8B,
+		.icndmr = ICnDMR_YCMODE_NV16,
+		.fmt_types = V4L2_PIXEL_ENC_YUV,
 	},
 	{
 		.codes = {
-			MEDIA_BUS_FMT_SGBRG8_1X8,
+			MEDIA_BUS_FMT_UYVY10_2X10,
 		},
-		.format = V4L2_PIX_FMT_SGBRG8,
-		.datatype = MIPI_CSI2_DT_RAW8,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 1,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_GBGB,
+		.format = V4L2_PIX_FMT_UYVY,
+		.datatype = MIPI_CSI2_DT_YUV422_10B,
+		.icndmr = ICnDMR_YCMODE_UYVY,
+		.fmt_types = V4L2_PIXEL_ENC_YUV,
 	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SGRBG8_1X8,
-		},
-		.format = V4L2_PIX_FMT_SGRBG8,
-		.datatype = MIPI_CSI2_DT_RAW8,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 1,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_GRGR,
-	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SRGGB8_1X8,
-		},
-		.format = V4L2_PIX_FMT_SRGGB8,
-		.datatype = MIPI_CSI2_DT_RAW8,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 1,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_RGRG,
-	},
-
-	/* 10-bit */
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SBGGR10_1X10,
-		},
-		.format = V4L2_PIX_FMT_RAW_CRU10,
-		.datatype = MIPI_CSI2_DT_RAW10,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_BGBG,
-	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SGBRG10_1X10,
-		},
-		.format = V4L2_PIX_FMT_RAW_CRU10,
-		.datatype = MIPI_CSI2_DT_RAW10,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_GBGB,
-	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SGRBG10_1X10,
-		},
-		.format = V4L2_PIX_FMT_RAW_CRU10,
-		.datatype = MIPI_CSI2_DT_RAW10,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_GRGR,
-	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SRGGB10_1X10,
-		},
-		.format = V4L2_PIX_FMT_RAW_CRU10,
-		.datatype = MIPI_CSI2_DT_RAW10,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_RGRG,
-	},
-
-	/* 12-bit */
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SBGGR12_1X12,
-		},
-		.format = V4L2_PIX_FMT_RAW_CRU12,
-		.datatype = MIPI_CSI2_DT_RAW12,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_BGBG,
-	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SGBRG12_1X12,
-		},
-		.format = V4L2_PIX_FMT_RAW_CRU12,
-		.datatype = MIPI_CSI2_DT_RAW12,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_GBGB,
-	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SGRBG12_1X12,
-		},
-		.format = V4L2_PIX_FMT_RAW_CRU12,
-		.datatype = MIPI_CSI2_DT_RAW12,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_GRGR,
-	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SRGGB12_1X12,
-		},
-		.format = V4L2_PIX_FMT_RAW_CRU12,
-		.datatype = MIPI_CSI2_DT_RAW12,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_RGRG,
-	},
-
-	/* 14-bit */
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SBGGR14_1X14,
-		},
-		.format = V4L2_PIX_FMT_RAW_CRU14,
-		.datatype = MIPI_CSI2_DT_RAW14,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_BGBG,
-	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SGBRG14_1X14,
-		},
-		.format = V4L2_PIX_FMT_RAW_CRU14,
-		.datatype = MIPI_CSI2_DT_RAW14,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_GBGB,
-	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SGRBG14_1X14,
-		},
-		.format = V4L2_PIX_FMT_RAW_CRU14,
-		.datatype = MIPI_CSI2_DT_RAW14,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_GRGR,
-	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SRGGB14_1X14,
-		},
-		.format = V4L2_PIX_FMT_RAW_CRU14,
-		.datatype = MIPI_CSI2_DT_RAW14,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_RGRG,
-	},
-
-	/* 16-bit */
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SBGGR16_1X16,
-		},
-		.format = V4L2_PIX_FMT_SBGGR16,
-		.datatype = MIPI_CSI2_DT_RAW16,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_BGBG,
-	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SGBRG16_1X16,
-		},
-		.format = V4L2_PIX_FMT_SGBRG16,
-		.datatype = MIPI_CSI2_DT_RAW16,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_GBGB,
-	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SGRBG16_1X16,
-		},
-		.format = V4L2_PIX_FMT_SGRBG16,
-		.datatype = MIPI_CSI2_DT_RAW16,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_GRGR,
-	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_SRGGB16_1X16,
-		},
-		.format = V4L2_PIX_FMT_SRGGB16,
-		.datatype = MIPI_CSI2_DT_RAW16,
-		.icndmr = 0,
-		.yuv = false,
-		.bpp = 2,
-		.fmt_types = V4L2_PIXEL_ENC_BAYER,
-		.rawsttyp = ICnMC_RAWSTTYP_RGRG,
-	},
-
-	/* Other formats (not Bayer) */
 	{
 		.codes = {
 			MEDIA_BUS_FMT_YUYV8_1X16,
@@ -280,8 +46,6 @@ static const struct rzg2l_cru_ip_format rzg2l_cru_ip_formats[] = {
 		.format = V4L2_PIX_FMT_YUYV,
 		.datatype = MIPI_CSI2_DT_YUV422_8B,
 		.icndmr = ICnDMR_YCMODE_YUYV,
-		.yuv = true,
-		.bpp = 2,
 		.fmt_types = V4L2_PIXEL_ENC_YUV,
 	},
 	{
@@ -291,19 +55,6 @@ static const struct rzg2l_cru_ip_format rzg2l_cru_ip_formats[] = {
 		.format = V4L2_PIX_FMT_GREY,
 		.datatype = MIPI_CSI2_DT_RAW8,
 		.icndmr = ICnDMR_YCMODE_GREY,
-		.yuv = true,
-		.bpp = 1,
-		.fmt_types = V4L2_PIXEL_ENC_YUV,
-	},
-	{
-		.codes = {
-			MEDIA_BUS_FMT_YUYV8_1X16,
-		},
-		.format = V4L2_PIX_FMT_NV16,
-		.datatype = MIPI_CSI2_DT_YUV422_8B,
-		.icndmr = ICnDMR_YCMODE_NV16,
-		.yuv = true,
-		.bpp = 1,
 		.fmt_types = V4L2_PIXEL_ENC_YUV,
 	},
 	{
@@ -313,45 +64,145 @@ static const struct rzg2l_cru_ip_format rzg2l_cru_ip_formats[] = {
 		.format = V4L2_PIX_FMT_BGR24,
 		.datatype = MIPI_CSI2_DT_RGB888,
 		.icndmr = ICnDMR_RGBMODE_RGB24,
-		.yuv = false,
-		.bpp = 3,
 		.fmt_types = V4L2_PIXEL_ENC_RGB,
 	},
 	{
 		.codes = {
-			MEDIA_BUS_FMT_ARGB8888_1X32,
+			MEDIA_BUS_FMT_RGB444_1X12,
 		},
 		.format = V4L2_PIX_FMT_XBGR32,
-		.datatype = MIPI_CSI2_DT_RGB888,
+		.datatype = MIPI_CSI2_DT_RGB444,
 		.icndmr = ICnDMR_RGBMODE_XRGB32,
-		.yuv = false,
-		.bpp = 4,
 		.fmt_types = V4L2_PIXEL_ENC_RGB,
 	},
 	{
 		.codes = {
-			MEDIA_BUS_FMT_ARGB8888_1X32,
+			MEDIA_BUS_FMT_RGB565_2X8_LE,
 		},
 		.format = V4L2_PIX_FMT_ABGR32,
-		.datatype = MIPI_CSI2_DT_RGB888,
+		.datatype = MIPI_CSI2_DT_RGB565,
 		.icndmr = ICnDMR_RGBMODE_ABGR32,
-		.yuv = false,
-		.bpp = 4,
 		.fmt_types = V4L2_PIXEL_ENC_RGB,
 	},
 	{
 		.codes = {
-			MEDIA_BUS_FMT_ARGB8888_1X32,
+			MEDIA_BUS_FMT_RGB666_1X18,
 		},
 		.format = V4L2_PIX_FMT_ARGB32,
-		.datatype = MIPI_CSI2_DT_RGB888,
+		.datatype = MIPI_CSI2_DT_RGB666,
 		.icndmr = ICnDMR_RGBMODE_ARGB32,
-		.yuv = false,
-		.bpp = 4,
 		.fmt_types = V4L2_PIXEL_ENC_RGB,
 	},
-};
+	{
+		.codes = {
+			MEDIA_BUS_FMT_SBGGR8_1X8,
+		},
+		.format = V4L2_PIX_FMT_SBGGR8,
+		.datatype = MIPI_CSI2_DT_RAW8,
+		.icndmr = 0,
+		.fmt_types = V4L2_PIXEL_ENC_BAYER,
+	},
+	{
+		.codes = {
+			MEDIA_BUS_FMT_SGBRG8_1X8,
+		},
+		.format = V4L2_PIX_FMT_SGBRG8,
+		.datatype = MIPI_CSI2_DT_RAW8,
+		.icndmr = 0,
+		.fmt_types = V4L2_PIXEL_ENC_BAYER,
+	},
+	{
+		.codes = {
+			MEDIA_BUS_FMT_SGRBG8_1X8,
+		},
+		.format = V4L2_PIX_FMT_SGRBG8,
+		.datatype = MIPI_CSI2_DT_RAW8,
+		.icndmr = 0,
+		.fmt_types = V4L2_PIXEL_ENC_BAYER,
+	},
+	{
+		.codes = {
+			MEDIA_BUS_FMT_SRGGB8_1X8,
+		},
+		.format = V4L2_PIX_FMT_SRGGB8,
+		.datatype = MIPI_CSI2_DT_RAW8,
+		.icndmr = 0,
+		.fmt_types = V4L2_PIXEL_ENC_BAYER,
+	},
+	{
+		.codes = {
+			MEDIA_BUS_FMT_SBGGR10_1X10,
+			MEDIA_BUS_FMT_SGBRG10_1X10,
+			MEDIA_BUS_FMT_SGRBG10_1X10,
+			MEDIA_BUS_FMT_SRGGB10_1X10
+		},
+		.format = V4L2_PIX_FMT_RAW_CRU10,
+		.datatype = MIPI_CSI2_DT_RAW10,
+		.icndmr = 0,
+		.fmt_types = V4L2_PIXEL_ENC_BAYER,
+	},
+	{
+		.codes = {
+			MEDIA_BUS_FMT_SBGGR12_1X12,
+			MEDIA_BUS_FMT_SGBRG12_1X12,
+			MEDIA_BUS_FMT_SGRBG12_1X12,
+			MEDIA_BUS_FMT_SRGGB12_1X12
+		},
+		.format = V4L2_PIX_FMT_RAW_CRU12,
+		.datatype = MIPI_CSI2_DT_RAW12,
+		.icndmr = 0,
+		.fmt_types = V4L2_PIXEL_ENC_BAYER,
+	},
+	{
+		.codes = {
+			MEDIA_BUS_FMT_SBGGR14_1X14,
+			MEDIA_BUS_FMT_SGBRG14_1X14,
+			MEDIA_BUS_FMT_SGRBG14_1X14,
+			MEDIA_BUS_FMT_SRGGB14_1X14
+		},
+		.format = V4L2_PIX_FMT_RAW_CRU14,
+		.datatype = MIPI_CSI2_DT_RAW14,
+		.icndmr = 0,
+		.fmt_types = V4L2_PIXEL_ENC_BAYER,
+	},
+	{
+		.codes = {
+			MEDIA_BUS_FMT_SRGGB16_1X16,
+		},
+		.datatype = MIPI_CSI2_DT_RAW16,
+		.format = V4L2_PIX_FMT_SRGGB16,
+		.icndmr = 0,
+		.fmt_types = V4L2_PIXEL_ENC_BAYER,
+	},
+	{
+		.codes = {
+			MEDIA_BUS_FMT_SGRBG16_1X16,
+		},
+		.datatype = MIPI_CSI2_DT_RAW16,
+		.format = V4L2_PIX_FMT_SGRBG16,
+		.icndmr = 0,
+		.fmt_types = V4L2_PIXEL_ENC_BAYER,
+	},
+	{
+		.codes = {
+			MEDIA_BUS_FMT_SGBRG16_1X16,
+		},
+		.datatype = MIPI_CSI2_DT_RAW16,
+		.format = V4L2_PIX_FMT_SGBRG16,
+		.icndmr = 0,
+		.fmt_types = V4L2_PIXEL_ENC_BAYER,
+	},
+	{
+		.codes = {
+			MEDIA_BUS_FMT_SBGGR16_1X16,
+		},
+		.datatype = MIPI_CSI2_DT_RAW16,
+		.format = V4L2_PIX_FMT_SBGGR16,
+		.icndmr = 0,
+		.fmt_types = V4L2_PIXEL_ENC_BAYER,
+	},
 
+};
 
 const struct rzg2l_cru_ip_format *rzg2l_cru_ip_code_to_fmt(unsigned int code)
 {
@@ -544,8 +395,8 @@ static int rzg2l_cru_ip_enum_frame_size(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int rzg2l_cru_ip_init_state(struct v4l2_subdev *sd,
-				   struct v4l2_subdev_state *sd_state)
+static int rzg2l_cru_ip_init_config(struct v4l2_subdev *sd,
+				    struct v4l2_subdev_state *sd_state)
 {
 	struct v4l2_subdev_format fmt = { .pad = RZG2L_CRU_IP_SINK, };
 
@@ -572,13 +423,13 @@ static const struct v4l2_subdev_pad_ops rzg2l_cru_ip_pad_ops = {
 	.set_fmt = rzg2l_cru_ip_set_format,
 };
 
+static const struct v4l2_subdev_internal_ops rzg2l_cru_ip_internal_ops = {
+	.init_state = rzg2l_cru_ip_init_config,
+};
+
 static const struct v4l2_subdev_ops rzg2l_cru_ip_subdev_ops = {
 	.video = &rzg2l_cru_ip_video_ops,
 	.pad = &rzg2l_cru_ip_pad_ops,
-};
-
-static const struct v4l2_subdev_internal_ops rzg2l_cru_ip_internal_ops = {
-	.init_state = rzg2l_cru_ip_init_state,
 };
 
 static const struct media_entity_operations rzg2l_cru_ip_entity_ops = {
