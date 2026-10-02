@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * Device Tree Source for remoteproc support on the RZ/V2H SoC.
+ *
+ * Enables the CM33, CR8 core0 and CR8 core1 remoteproc nodes and reserves
+ * the OpenAMP vrings/buffer. Boards that start the remote cores from the
+ * IPL or CM33 (CM33 cold boot, CM33 firmware load) must not include this;
+ * the RZ/V2H RDK uses overlays/rzv2h-rdk-remoteproc.dts instead.
+ *
+ * Copyright (C) 2026 Renesas Electronics Corp.
+ */
+
+/ {
+	/* ---------------------------------------------------------------- */
+	/* Remote processors                                                */
+	/* ---------------------------------------------------------------- */
+
+	soc: soc {
+		cm33_rproc: cm33 {
+			memory-region = <&vdev0vring0>, <&vdev0vring1>, <&vdev0buffer>;
+			status = "okay";
+		};
+
+		cr8_0_rproc: cr8_0 {
+			memory-region = <&vdev0vring0>, <&vdev0vring1>, <&vdev0buffer>;
+			status = "okay";
+		};
+
+		cr8_1_rproc: cr8_1 {
+			memory-region = <&vdev0vring0>, <&vdev0vring1>, <&vdev0buffer>;
+			status = "okay";
+		};
+	};
+
+	/* ---------------------------------------------------------------- */
+	/* Reserved memory carveouts                                        */
+	/* ---------------------------------------------------------------- */
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* OpenAMP channel 0, shared by all remote cores */
+		vdev0vring0: vdev0vring0@0x43000000 {
+			compatible = "shared-dma-pool";
+			reg = <0x0 0x43000000 0x0 0x50000>;
+			no-map;
+		};
+
+		vdev0vring1: vdev0vring1@0x43050000 {
+			compatible = "shared-dma-pool";
+			reg = <0x0 0x43050000 0x0 0x50000>;
+			no-map;
+		};
+
+		vdev0buffer: vdev0buffer@0x43200000 {
+			compatible = "shared-dma-pool";
+			reg = <0x0 0x43200000 0x0 0x300000>;
+			no-map;
+		};
+	};
+};

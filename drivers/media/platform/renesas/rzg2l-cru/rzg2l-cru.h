@@ -9,7 +9,9 @@
 #define __RZG2L_CRU__
 
 #include <linux/irqreturn.h>
+#include <linux/mutex.h>
 #include <linux/reset.h>
+#include <linux/spinlock.h>
 
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
@@ -17,25 +19,9 @@
 #include <media/v4l2-device.h>
 #include <media/videobuf2-v4l2.h>
 
-#define CONNECTION_TIME 2000
-#define SETUP_WAIT_TIME 3000
-
-enum rz_cru_type {
-	RZG2L_CRU_TYPE,
-	RZV2H_CRU_TYPE,
-};
-
-#define RZG2L_CRU_MAX			4
-
-
 /* Number of HW buffers */
 #define RZG2L_CRU_HW_BUFFER_MAX		8
-#define RZG2L_CRU_HW_BUFFER_DEFAULT	8
-#define RZG2L_CRU_HW_BUFFER_VALUE     4
-
-#define CRU_V4L_NUM_BUFFERS_MIN 12
-#define CRU_V4L_NUM_BUFFERS_MAX 20
-#define CRU_V4L_NUM_BUFFERS_DEFAULT 12
+#define RZG2L_CRU_HW_BUFFER_DEFAULT	3
 
 /* Address alignment mask for HW buffers */
 #define RZG2L_CRU_HW_BUFFER_MASK	0x1ff
@@ -46,57 +32,265 @@ enum rz_cru_type {
 #define RZG2L_CRU_MIN_INPUT_WIDTH	320
 #define RZG2L_CRU_MIN_INPUT_HEIGHT	240
 
+#define RZG2L_CRU_MAX			4
+
 enum rzg2l_csi2_pads {
 	RZG2L_CRU_IP_SINK = 0,
 	RZG2L_CRU_IP_SOURCE,
 };
 
-struct rzg2l_cru_dev;
+/**
+ * struct runtime_update - Runtime configuration updates
+ * @linear_matrix: Enable/disable linear matrix conversion
+ */
+struct runtime_update {
+	bool linear_matrix;
+};
 
 /*
  * The base for the RZ/G2L CRU driver controls.
  * We reserve 16 controls for this driver
- * The last USER-class private control IDs is V4L2_CID_USER_ATMEL_ISC_BASE.
+ * The last USER-class private control IDs is V4L2_CID_USER_DW100_BASE.
  */
 
-#define V4L2_CID_USER_CRU_BASE	(V4L2_CID_USER_BASE + 0x10e0)
+#define V4L2_CID_USER_CRU_BASE	(V4L2_CID_USER_BASE + 0x11a0)
 
-/* V4L2 private controls */
-#define V4L2_CID_CRU_FRAME_SKIP	(V4L2_CID_USER_CRU_BASE + 0)
-
-#define V4L2_CID_CRU_LIMIT	1
+/* CRU V4L2 private controls */
+enum rzg2l_cru_v4l2_priv_ctrls {
+	V4L2_CID_CRU_FRAME_SKIP = V4L2_CID_USER_CRU_BASE,
+	V4L2_CID_CRU_LINEAR_MATRIX,
+	V4L2_CID_CRU_LINEAR_MATRIX_ROF,
+	V4L2_CID_CRU_LINEAR_MATRIX_GOF,
+	V4L2_CID_CRU_LINEAR_MATRIX_BOF,
+	V4L2_CID_CRU_LINEAR_MATRIX_RR,
+	V4L2_CID_CRU_LINEAR_MATRIX_RG,
+	V4L2_CID_CRU_LINEAR_MATRIX_RB,
+	V4L2_CID_CRU_LINEAR_MATRIX_GR,
+	V4L2_CID_CRU_LINEAR_MATRIX_GG,
+	V4L2_CID_CRU_LINEAR_MATRIX_GB,
+	V4L2_CID_CRU_LINEAR_MATRIX_BR,
+	V4L2_CID_CRU_LINEAR_MATRIX_BG,
+	V4L2_CID_CRU_LINEAR_MATRIX_BB,
+	V4L2_CID_CRU_STATISTICS,
+	V4L2_CID_CRU_SD_BLKSIZE,
+	V4L2_CID_CRU_SD_STHPOS,
+	V4L2_CID_CRU_SD_STSADPOS,
+};
 
 static const struct v4l2_ctrl_ops rzg2l_cru_ctrl_ops;
 
-static const struct v4l2_ctrl_config rzg2l_cru_ctrls[V4L2_CID_CRU_LIMIT] = {
+static const char * const cru_statistics_blksize_menu[] = {
+	"16x16",
+	"32x32",
+	"64x64",
+	"128x128",
+};
+
+static const struct v4l2_ctrl_config rzg2l_cru_ctrls[] = {
 	{
 		.id = V4L2_CID_CRU_FRAME_SKIP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Disable or enable skipping frame with the amount of setting number",
+		.max = 127,
+		.min = 0,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_LINEAR_MATRIX,
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
 		.ops = &rzg2l_cru_ctrl_ops,
-		.name = "Skipping Frames Enable/Disable",
+		.name = "Linear Matrix Processing Enable/Disable",
 		.max = 1,
 		.min = 0,
 		.step = 1,
 		.def = 0,
 		.is_private = 1,
-	}
+	}, {
+		.id = V4L2_CID_CRU_LINEAR_MATRIX_ROF,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Linear Matrix R offset",
+		.max = 127,
+		.min = -128,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_LINEAR_MATRIX_GOF,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Linear Matrix G offset",
+		.max = 127,
+		.min = -128,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_LINEAR_MATRIX_BOF,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Linear Matrix B offset",
+		.max = 127,
+		.min = -128,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_LINEAR_MATRIX_RR,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Linear Matrix RR coefficient ",
+		.max = 4095,
+		.min = -4096,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_LINEAR_MATRIX_RG,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Linear Matrix RG coefficient ",
+		.max = 4095,
+		.min = -4096,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_LINEAR_MATRIX_RB,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Linear Matrix RB coefficient ",
+		.max = 4095,
+		.min = -4096,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_LINEAR_MATRIX_GR,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Linear Matrix GR coefficient ",
+		.max = 4095,
+		.min = -4096,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_LINEAR_MATRIX_GG,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Linear Matrix GG coefficient ",
+		.max = 4095,
+		.min = -4096,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_LINEAR_MATRIX_GB,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Linear Matrix GB coefficient ",
+		.max = 4095,
+		.min = -4096,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_LINEAR_MATRIX_BR,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Linear Matrix BR coefficient ",
+		.max = 4095,
+		.min = -4096,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_LINEAR_MATRIX_BG,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Linear Matrix BG coefficient ",
+		.max = 4095,
+		.min = -4096,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_LINEAR_MATRIX_BB,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Linear Matrix BB coefficient ",
+		.max = 4095,
+		.min = -4096,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_STATISTICS,
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Statistics Data Enable/Disable",
+		.max = 1,
+		.min = 0,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_SD_BLKSIZE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Statistics Data Unit Blocksize",
+		.max = 3,
+		.min = 0,
+		.def = 0,
+		.is_private = 1,
+		.qmenu = cru_statistics_blksize_menu,
+	}, {
+		.id = V4L2_CID_CRU_SD_STHPOS,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Statistics Horizontal Start Position",
+		.max = 376,
+		.min = 0,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	}, {
+		.id = V4L2_CID_CRU_SD_STSADPOS,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.ops = &rzg2l_cru_ctrl_ops,
+		.name = "Statistics Input Data Bit Position",
+		.max = 8,
+		.min = 0,
+		.step = 1,
+		.def = 0,
+		.is_private = 1,
+	},
 };
 
-/* Minimum skipping frame for camera sensors stability */
-#define CRU_FRAME_SKIP		3
+struct rzg2l_cru_dev;
 
 /**
- * enum rzg2l_cru_dma_state - DMA states
- * @RZG2L_CRU_DMA_STOPPED:   No operation in progress
- * @RZG2L_CRU_DMA_STARTING:  Capture starting up
- * @RZG2L_CRU_DMA_RUNNING:   Operation in progress have buffers
- * @RZG2L_CRU_DMA_STOPPING:  Stopping operation
+ * struct rzg2l_cru_parallel - Parallel video input endpoint descriptor
+ * @asd:        sub-device descriptor for async framework
+ * @subdev:     subdevice matched using async framework
+ * @mbus_type:  media bus type
+ * @mbus_flags: media bus configuration flags
+ * @source_pad: source pad of remote subdevice
+ * @sink_pad:   sink pad of remote subdevice
+ *
  */
-enum rzg2l_cru_dma_state {
-	RZG2L_CRU_DMA_STOPPED = 0,
-	RZG2L_CRU_DMA_STARTING,
-	RZG2L_CRU_DMA_RUNNING,
-	RZG2L_CRU_DMA_STOPPING,
+struct rzg2l_cru_parallel {
+	struct v4l2_async_connection asd;
+	struct v4l2_subdev *subdev;
+
+	enum v4l2_mbus_type mbus_type;
+	unsigned int mbus_flags;
+
+	unsigned int source_pad;
+	unsigned int sink_pad;
 };
 
 struct rzg2l_cru_csi {
@@ -117,8 +311,6 @@ struct rzg2l_cru_ip {
  * @datatype: MIPI CSI2 data type
  * @format: 4CC format identifier (V4L2_PIX_FMT_*)
  * @icndmr: ICnDMR register value
- * @yuv: Flag to indicate whether the format is YUV-based.
- * @bpp: bytes per pixel
  * @fmt_types: specifies the pixel encoding value(YUV, RGB or BAYER).
  */
 struct rzg2l_cru_ip_format {
@@ -130,17 +322,19 @@ struct rzg2l_cru_ip_format {
 	u32 datatype;
 	u32 format;
 	u32 icndmr;
-	bool yuv;
 	enum v4l2_pixel_encoding fmt_types;
-	u8 bpp;
-	u32 rawsttyp;
+};
+
+enum rz_cru_type {
+	RZG2L_CRU_TYPE,
+	RZV2H_CRU_TYPE,
 };
 
 struct rzg2l_cru_info {
-	u8 cru_type;
-	int max_cru_channels;
 	unsigned int max_width;
 	unsigned int max_height;
+	u8 cru_type;
+	int max_cru_channels;
 	u16 image_conv;
 	const u16 *regs;
 	bool has_stride;
@@ -168,13 +362,23 @@ struct rzg2l_cru_info {
  * @buf_addr:		Memory addresses where current video data is written.
  * @notifier:		V4L2 asynchronous subdevs notifier
  *
+ * @ctrl:              V4L2 control for streaming flow management
  * @ctrl_handler:	V4L2 control handler associated with CRU
+ * @runtime_update	Runtime updatable parameters
  *
  * @ip:			Image processing subdev info
+ * @parallel:		parallel input subdevice descriptor
  * @csi:		CSI info
  * @mdev:		media device
  * @mdev_lock:		protects the count, notifier and csi members
  * @pad:		media pad for the video device entity
+ *
+ * @hw_lock:		protects the @active_slot counter, hardware programming
+ * 			of slot addresses and the @buf_addr[] list
+ * @buf_addr:		Memory addresses where current video data is written
+ * @active_slot:	The slot in use
+ *
+ * @is_csi:		flag to mark the CRU as using a CSI-2 subdevice
  *
  * @lock:		protects @queue
  * @queue:		vb2 buffers queue
@@ -182,11 +386,9 @@ struct rzg2l_cru_info {
  * @scratch_phys:	physical address of the scratch buffer
  *
  * @qlock:		protects @queue_buf, @buf_list, @sequence
- *			@state
  * @queue_buf:		Keeps track of buffers given to HW slot
  * @buf_list:		list of queued buffers
  * @sequence:		V4L2 buffers sequence number
- * @state:		keeps track of operation state
  *
  * @format:		active V4L2 pixel format
  */
@@ -204,15 +406,27 @@ struct rzg2l_cru_dev {
 	struct v4l2_device v4l2_dev;
 	u8 num_buf;
 
+	u8 bpp;
 	u8 svc_channel;
-	dma_addr_t buf_addr[RZG2L_CRU_HW_BUFFER_DEFAULT];
+	u32 code;
 	struct v4l2_async_notifier notifier;
 
+	struct v4l2_ctrl *ctrl;
+	struct v4l2_ctrl_handler ctrl_handler;
+	struct runtime_update runtime;
+
+	struct rzg2l_cru_parallel *parallel;
 	struct rzg2l_cru_ip ip;
 	struct rzg2l_cru_csi csi;
 	struct media_device mdev;
 	struct mutex mdev_lock;
 	struct media_pad pad;
+
+	spinlock_t hw_lock;
+	dma_addr_t buf_addr[RZG2L_CRU_HW_BUFFER_MAX];
+	unsigned int active_slot;
+
+	bool is_csi;
 
 	struct mutex lock;
 	struct vb2_queue queue;
@@ -223,32 +437,35 @@ struct rzg2l_cru_dev {
 	struct vb2_v4l2_buffer *queue_buf[RZG2L_CRU_HW_BUFFER_MAX];
 	struct list_head buf_list;
 	unsigned int sequence;
-	enum rzg2l_cru_dma_state state;
 
-	struct v4l2_ctrl_handler ctrl_handler;
+	struct v4l2_rect crop;
+	struct v4l2_rect compose;
+	struct v4l2_rect source;
+
+	bool running;
 
 	struct v4l2_pix_format format;
+	u8 frame_skip;
 
-	bool is_frame_skip;
+	bool is_statistics;
+	int sd_blksize;
+	int sd_sthpos;
+	int sd_stsadpos;
 
-	struct task_struct *retry_thread;
+	bool is_linear_matrix_enable;
+	int linear_matrix_rgb_offset[3];
+	int linear_matrix_r[3];	/* RR, RG, RB */
+	int linear_matrix_g[3]; /* GR, GG, GB */
+	int linear_matrix_b[3]; /* BR, BG, BB */
 
 	int id;
-	struct workqueue_struct *work_queue;
-	struct delayed_work rzg2l_cru_resume;
-	wait_queue_head_t setup_wait;
-	bool suspend;
-	bool is_csi;
 };
-
-/* Debug */
-#define cru_dbg(d, fmt, arg...)		dev_dbg(d->dev, fmt, ##arg)
-#define cru_info(d, fmt, arg...)	dev_info(d->dev, fmt, ##arg)
-#define cru_warn(d, fmt, arg...)	dev_warn(d->dev, fmt, ##arg)
-#define cru_err(d, fmt, arg...)		dev_err(d->dev, fmt, ##arg)
 
 int rzg2l_cru_start_image_processing(struct rzg2l_cru_dev *cru);
 void rzg2l_cru_stop_image_processing(struct rzg2l_cru_dev *cru);
+
+int rzg2l_cru_set_stream(struct rzg2l_cru_dev *cru, int on);
+void rzg2l_cru_requeue_active_buffers(struct rzg2l_cru_dev *cru);
 
 int rzg2l_cru_dma_register(struct rzg2l_cru_dev *cru);
 void rzg2l_cru_dma_unregister(struct rzg2l_cru_dev *cru);
@@ -257,12 +474,13 @@ int rzg2l_cru_video_register(struct rzg2l_cru_dev *cru);
 void rzg2l_cru_video_unregister(struct rzg2l_cru_dev *cru);
 irqreturn_t rzg2l_cru_irq(int irq, void *data);
 irqreturn_t rzg3e_cru_irq(int irq, void *data);
-irqreturn_t rzv2h_cru_irq(int irq, void *data);
 
 const struct v4l2_format_info *rzg2l_cru_format_from_pixel(u32 format);
+
 int rzg2l_cru_ip_subdev_register(struct rzg2l_cru_dev *cru);
 void rzg2l_cru_ip_subdev_unregister(struct rzg2l_cru_dev *cru);
 struct v4l2_mbus_framefmt *rzg2l_cru_ip_get_src_fmt(struct rzg2l_cru_dev *cru);
+
 const struct rzg2l_cru_ip_format *rzg2l_cru_ip_code_to_fmt(unsigned int code);
 const struct rzg2l_cru_ip_format *rzg2l_cru_ip_format_to_fmt(u32 format);
 const struct rzg2l_cru_ip_format *rzg2l_cru_ip_index_to_fmt(u32 index);
@@ -277,7 +495,4 @@ void rzg3e_cru_disable_interrupts(struct rzg2l_cru_dev *cru);
 bool rzg2l_fifo_empty(struct rzg2l_cru_dev *cru);
 bool rzg3e_fifo_empty(struct rzg2l_cru_dev *cru);
 
-
-void rzg2l_cru_resume_start_streaming(struct work_struct *work);
-void rzg2l_cru_suspend_stop_streaming(struct rzg2l_cru_dev *cru);
 #endif
