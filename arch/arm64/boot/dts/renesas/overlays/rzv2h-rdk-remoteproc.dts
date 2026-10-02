@@ -1,0 +1,59 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * RZ/V2H RDK remoteproc overlay
+ *
+ * Enables the CM33, CR8 core0 and CR8 core1 remoteproc devices and reserves
+ * the OpenAMP vrings/buffer shared by all remote cores.
+ *
+ * Apply only in the remoteproc IPL mode (RZ_SRAM_REGION_ACCESS +
+ * RZ_REMOTEPROC). In the modes where the IPL or CM33 starts the remote cores
+ * (CM33 cold boot, CM33 firmware load + CA55 clock-up) a remoteproc stop/start
+ * resets the cores and wipes their memory, and without
+ * ENABLE_SRAM_REGION_ACCESS_MCPU the MCPU SRAM accesses abort.
+ *
+ * Enable with enable_overlay_remoteproc=1 in boot/uEnv.txt.
+ *
+ * Copyright (C) 2026 Renesas Electronics Corporation
+ */
+
+/dts-v1/;
+/plugin/;
+
+&{/reserved-memory} {
+    #address-cells = <2>;
+    #size-cells = <2>;
+
+    /* OpenAMP channel 0, shared by all remote cores */
+    vdev0vring0: vdev0vring0@43000000 {
+        compatible = "shared-dma-pool";
+        reg = <0x0 0x43000000 0x0 0x50000>;
+        no-map;
+    };
+
+    vdev0vring1: vdev0vring1@43050000 {
+        compatible = "shared-dma-pool";
+        reg = <0x0 0x43050000 0x0 0x50000>;
+        no-map;
+    };
+
+    vdev0buffer: vdev0buffer@43200000 {
+        compatible = "shared-dma-pool";
+        reg = <0x0 0x43200000 0x0 0x300000>;
+        no-map;
+    };
+};
+
+&cm33_rproc {
+    memory-region = <&vdev0vring0>, <&vdev0vring1>, <&vdev0buffer>;
+    status = "okay";
+};
+
+&cr8_0_rproc {
+    memory-region = <&vdev0vring0>, <&vdev0vring1>, <&vdev0buffer>;
+    status = "okay";
+};
+
+&cr8_1_rproc {
+    memory-region = <&vdev0vring0>, <&vdev0vring1>, <&vdev0buffer>;
+    status = "okay";
+};

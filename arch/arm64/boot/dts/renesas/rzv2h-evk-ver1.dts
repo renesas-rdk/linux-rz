@@ -11,6 +11,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include "r9a09g057.dtsi"
 #include "r9a09g057-multi-os.dtsi"
+#include "r9a09g057-multi-os-rproc.dtsi"
 #include <dt-bindings/soc/renesas,rsci.h>
 
 /*
