@@ -1122,7 +1122,7 @@
 			compatible = "renesas,rzv2h-cm33";
 			reg = <0x0 0x08000000 0x0 0x00fffff>,
 				  <0x0 0x40010000 0x0 0x007fffff>,
-				  <0x0 0x42f00000 0x0 0x01000000>;
+				  <0x0 0x42f00000 0x0 0x01f00000>;
 			reg-names = "cm33_sram", "cm33_ddr", "cm33_rsc_table";
 			renesas,rz-core = <0x0>;
 			renesas,rz-cpg  = <&cpg>;
@@ -1141,32 +1141,30 @@
 
 		cr8_0_rproc: cr8_0 {
 			compatible = "renesas,rzv2h-cr8";
-			reg = <0x0 0x08180000 0x0 0x00080000>, /* cr8_sram3 */
-				<0x0 0x12040000 0x0 0x0003ffff>,   /* cr8_tcm   */
-				<0x0 0x40800000 0x0 0x00100000>,   /* cr8_ddr: small, 0x40800000-0x40900000 */
-				<0x0 0x43800000 0x0 0x00f00000>,   /* cr8_ddr2: vring+buffer 0x43800000-0x44700000 */
-				<0x0 0x42f02000 0x0 0x00004000>;   /* cr8_rsc_table: covers mhu 0x42f03000 */
-			reg-names = "cr8_sram3", "cr8_tcm", "cr8_ddr", "cr8_ddr2", "cr8_rsc_table";
+			reg = <0x0 0x08180000 0x0 0x00080000>,
+				<0x0 0x12040000 0x0 0x0003ffff>,
+				<0x0 0x40800000 0x0 0x01000000>,
+				<0x0 0x42f00000 0x0 0x01000000>;
+			reg-names = "cr8_sram3", "cr8_tcm", "cr8_ddr", "cr8_rsc_table";
 			renesas,rz-core = <0x1>;
 			renesas,rz-cpg  = <&cpg>;
 			renesas,rz-sysc = <&sys>;
-			renesas,rz-rsctbl = <0x42f02000>;
+			renesas,rz-rsctbl = <0x42f00000>;
 			power-domains = <&cpg>;
 			status = "disabled";
 		};
 
 		cr8_1_rproc: cr8_1 {
 			compatible = "renesas,rzv2h-cr8";
-			reg = <0x0 0x08180000 0x0 0x000c0000>, /* cr8_sram3: covers 0x081bfffc */
-				<0x0 0x12080000 0x0 0x0003ffff>,   /* cr8_tcm   */
-				<0x0 0x41800000 0x0 0x00100000>,   /* cr8_ddr: small, 0x41800000-0x41900000 */
-				<0x0 0x44000000 0x0 0x00f00000>,   /* cr8_ddr2: vring+buffer 0x44000000-0x44f00000 */
-				<0x0 0x42f04000 0x0 0x00004000>;   /* cr8_rsc_table: covers mhu 0x42f05000 */
-			reg-names = "cr8_sram3", "cr8_tcm", "cr8_ddr", "cr8_ddr2", "cr8_rsc_table";
+			reg = <0x0 0x081bfffc 0x0 0x00080000>,
+				<0x0 0x12080000 0x0 0x0003ffff>,
+				<0x0 0x41800000 0x0 0x01000000>,
+				<0x0 0x42f00000 0x0 0x01000000>;
+			reg-names = "cr8_sram3", "cr8_tcm", "cr8_ddr", "cr8_rsc_table";
 			renesas,rz-core = <0x2>;
 			renesas,rz-cpg  = <&cpg>;
 			renesas,rz-sysc = <&sys>;
-			renesas,rz-rsctbl = <0x42f04000>;
+			renesas,rz-rsctbl = <0x42f00000>;
 			power-domains = <&cpg>;
 			status = "disabled";
 		};
@@ -1184,7 +1182,6 @@
 				 <&cpg CPG_MOD 0xf1>,
 				 <&cpg CPG_MOD 0xf2>;
 			clock-names = "gpu", "bus", "bus_ace";
-			power-domains = <&cpg>;
 			resets = <&cpg 0xdd>,
 				 <&cpg 0xde>,
 				 <&cpg 0xdf>;

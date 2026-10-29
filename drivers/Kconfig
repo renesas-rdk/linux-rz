@@ -239,11 +239,15 @@ source "drivers/siox/Kconfig"
 
 source "drivers/slimbus/Kconfig"
 
+source "drivers/drp/Kconfig"
+
 source "drivers/interconnect/Kconfig"
 
 source "drivers/counter/Kconfig"
 
 source "drivers/most/Kconfig"
+
+source "drivers/drpai/Kconfig"
 
 source "drivers/peci/Kconfig"
 

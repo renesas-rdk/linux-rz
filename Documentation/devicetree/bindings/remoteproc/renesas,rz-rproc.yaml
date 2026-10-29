@@ -26,10 +26,10 @@ properties:
   reg:
     description:
       Address ranges of the SRAM and DDR memories used by the remote processor.
-    maxItems: 3
+    maxItems: 4
 
   reg-names:
-    maxItems: 3
+    maxItems: 4
 
   memory-region:
     description:

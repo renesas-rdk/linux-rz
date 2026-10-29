@@ -11,6 +11,7 @@
 #include <linux/io.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/of_graph.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
@@ -96,13 +97,6 @@
 
 #define VSRSTS_RETRIES			20
 
-#define RZG2L_CSI2_MIN_WIDTH		320
-#define RZG2L_CSI2_MIN_HEIGHT		240
-#define RZG2L_CSI2_MAX_WIDTH		2800
-#define RZG2L_CSI2_MAX_HEIGHT		4095
-
-#define RZG2L_CSI2_DEFAULT_WIDTH	RZG2L_CSI2_MIN_WIDTH
-#define RZG2L_CSI2_DEFAULT_HEIGHT	RZG2L_CSI2_MIN_HEIGHT
 #define RZG2L_CSI2_DEFAULT_FMT		MEDIA_BUS_FMT_UYVY8_1X16
 
 enum rzg2l_csi2_pads {
@@ -137,6 +131,12 @@ struct rzg2l_csi2_info {
 	int (*dphy_enable)(struct rzg2l_csi2 *csi2);
 	int (*dphy_disable)(struct rzg2l_csi2 *csi2);
 	bool has_system_clk;
+	const struct rzg2l_csi2_format *format;
+	unsigned int num_formats;
+	unsigned int min_width;
+	unsigned int min_height;
+	unsigned int max_width;
+	unsigned int max_height;
 };
 
 struct rzg2l_csi2_timings {
@@ -175,83 +175,196 @@ static const struct rzv2h_csi2_s_hssettlectl rzv2h_s_hssettlectl[] = {
 
 static const struct rzg2l_csi2_timings rzg2l_csi2_global_timings[] = {
 	{
-		.max_hsfreq = 80,
-		.t_init = 79801,
-		.tclk_miss = 4,
-		.tclk_settle = 23,
-		.ths_settle = 31,
-		.tclk_prepare = 10,
-		.ths_prepare = 19,
-	},
-	{
-		.max_hsfreq = 125,
-		.t_init = 79801,
-		.tclk_miss = 4,
-		.tclk_settle = 23,
-		.ths_settle = 28,
-		.tclk_prepare = 10,
-		.ths_prepare = 19,
-	},
-	{
-		.max_hsfreq = 250,
-		.t_init = 79801,
-		.tclk_miss = 4,
-		.tclk_settle = 23,
-		.ths_settle = 22,
-		.tclk_prepare = 10,
-		.ths_prepare = 16,
-	},
-	{
-		.max_hsfreq = 360,
+		.max_hsfreq = 100,
 		.t_init = 79801,
 		.tclk_miss = 4,
 		.tclk_settle = 18,
 		.ths_settle = 19,
-		.tclk_prepare = 10,
+		.tclk_prepare = 14,
+		.ths_prepare = 18,
+	},
+	{
+		.max_hsfreq = 130,
+		.t_init = 79801,
+		.tclk_miss = 4,
+		.tclk_settle = 18,
+		.ths_settle = 17,
+		.tclk_prepare = 14,
+		.ths_prepare = 16,
+	},
+	{
+		.max_hsfreq = 200,
+		.t_init = 79801,
+		.tclk_miss = 4,
+		.tclk_settle = 18,
+		.ths_settle = 16,
+		.tclk_prepare = 14,
+		.ths_prepare = 14,
+	},
+	{
+		.max_hsfreq = 300,
+		.t_init = 79801,
+		.tclk_miss = 4,
+		.tclk_settle = 18,
+		.ths_settle = 15,
+		.tclk_prepare = 14,
+		.ths_prepare = 12,
+	},
+	{
+		.max_hsfreq = 400,
+		.t_init = 79801,
+		.tclk_miss = 4,
+		.tclk_settle = 18,
+		.ths_settle = 14,
+		.tclk_prepare = 14,
+		.ths_prepare = 11,
+	},
+	{
+		.max_hsfreq = 700,
+		.t_init = 79801,
+		.tclk_miss = 4,
+		.tclk_settle = 18,
+		.ths_settle = 14,
+		.tclk_prepare = 14,
 		.ths_prepare = 10,
+	},
+	{
+		.max_hsfreq = 1100,
+		.t_init = 79801,
+		.tclk_miss = 4,
+		.tclk_settle = 18,
+		.ths_settle = 13,
+		.tclk_prepare = 14,
+		.ths_prepare = 9,
 	},
 	{
 		.max_hsfreq = 1500,
 		.t_init = 79801,
 		.tclk_miss = 4,
 		.tclk_settle = 18,
-		.ths_settle = 18,
-		.tclk_prepare = 10,
-		.ths_prepare = 10,
+		.ths_settle = 12,
+		.tclk_prepare = 14,
+		.ths_prepare = 9,
 	},
+
 };
+
+/* Minimum and Maximum MIPI CSI2 Transfer Data Rate in Mbps */
+#define RATE_RANGES(_min, _max)		{.min = (_min), .max = (_max)}
 
 struct rzg2l_csi2_format {
 	u32 code;
 	unsigned int bpp;
+	struct {
+		unsigned long min;
+		unsigned long max;
+	} rate;
 };
 
 static const struct rzg2l_csi2_format rzg2l_csi2_formats[] = {
-	{ .code = MEDIA_BUS_FMT_UYVY8_1X16, .bpp = 16 },
-	{ .code = MEDIA_BUS_FMT_SBGGR8_1X8, .bpp = 8, },
-	{ .code = MEDIA_BUS_FMT_SGBRG8_1X8, .bpp = 8, },
-	{ .code = MEDIA_BUS_FMT_SGRBG8_1X8, .bpp = 8, },
-	{ .code = MEDIA_BUS_FMT_SRGGB8_1X8, .bpp = 8, },
-	{ .code = MEDIA_BUS_FMT_SBGGR10_1X10, .bpp = 10, },
-	{ .code = MEDIA_BUS_FMT_SGBRG10_1X10, .bpp = 10, },
-	{ .code = MEDIA_BUS_FMT_SGRBG10_1X10, .bpp = 10, },
-	{ .code = MEDIA_BUS_FMT_SRGGB10_1X10, .bpp = 10, },
-	{ .code = MEDIA_BUS_FMT_SBGGR12_1X12, .bpp = 12, },
-	{ .code = MEDIA_BUS_FMT_SGBRG12_1X12, .bpp = 12, },
-	{ .code = MEDIA_BUS_FMT_SGRBG12_1X12, .bpp = 12, },
-	{ .code = MEDIA_BUS_FMT_SRGGB12_1X12, .bpp = 12, },
-	{ .code = MEDIA_BUS_FMT_SBGGR14_1X14, .bpp = 14, },
-	{ .code = MEDIA_BUS_FMT_SGBRG14_1X14, .bpp = 14, },
-	{ .code = MEDIA_BUS_FMT_SGRBG14_1X14, .bpp = 14, },
-	{ .code = MEDIA_BUS_FMT_SRGGB14_1X14, .bpp = 14, },
-	{ .code = MEDIA_BUS_FMT_YUYV8_1X16,	.bpp = 16 },
-	{ .code = MEDIA_BUS_FMT_RGB565_2X8_LE,	.bpp = 16 },
-	{ .code = MEDIA_BUS_FMT_YUYV10_2X10,	.bpp = 20 },
-	{ .code = MEDIA_BUS_FMT_RGB888_1X24,	.bpp = 24 },
-	{ .code = MEDIA_BUS_FMT_SRGGB16_1X16,	.bpp = 16 },
-	{ .code = MEDIA_BUS_FMT_SGRBG16_1X16,	.bpp = 16 },
-	{ .code = MEDIA_BUS_FMT_SGBRG16_1X16,	.bpp = 16 },
-	{ .code = MEDIA_BUS_FMT_SBGGR16_1X16,	.bpp = 16 },
+	{ .code = MEDIA_BUS_FMT_UYVY8_1X16,	.bpp = 16,
+	  .rate = RATE_RANGES(80, 4256)},
+	{ .code = MEDIA_BUS_FMT_YUYV8_1X16,	.bpp = 16,
+	  .rate = RATE_RANGES(80, 4256)},
+	{ .code = MEDIA_BUS_FMT_RGB565_2X8_LE,	.bpp = 16,
+	  .rate = RATE_RANGES(80, 4256)},
+	{ .code = MEDIA_BUS_FMT_YUYV10_2X10,	.bpp = 20,
+	  .rate = RATE_RANGES(80, 5238)},
+	{ .code = MEDIA_BUS_FMT_RGB888_1X24,	.bpp = 24,
+	  .rate = RATE_RANGES(80, 6000)},
+	{ .code = MEDIA_BUS_FMT_SBGGR8_1X8,	.bpp = 8,
+	  .rate = RATE_RANGES(80, 2128)},
+	{ .code = MEDIA_BUS_FMT_SGBRG8_1X8,	.bpp = 8,
+	  .rate = RATE_RANGES(80, 2128)},
+	{ .code = MEDIA_BUS_FMT_SGRBG8_1X8,	.bpp = 8,
+	  .rate = RATE_RANGES(80, 2128)},
+	{ .code = MEDIA_BUS_FMT_SRGGB8_1X8,	.bpp = 8,
+	  .rate = RATE_RANGES(80, 2128)},
+	{ .code = MEDIA_BUS_FMT_SRGGB10_1X10,	.bpp = 10,
+	  .rate = RATE_RANGES(80, 2619)},
+	{ .code = MEDIA_BUS_FMT_SGRBG10_1X10,	.bpp = 10,
+	  .rate = RATE_RANGES(80, 2619)},
+	{ .code = MEDIA_BUS_FMT_SGBRG10_1X10,	.bpp = 10,
+	  .rate = RATE_RANGES(80, 2619)},
+	{ .code = MEDIA_BUS_FMT_SBGGR10_1X10,	.bpp = 10,
+	  .rate = RATE_RANGES(80, 2619)},
+	{ .code = MEDIA_BUS_FMT_SRGGB12_1X12,	.bpp = 12,
+	  .rate = RATE_RANGES(80, 3095)},
+	{ .code = MEDIA_BUS_FMT_SGRBG12_1X12,	.bpp = 12,
+	  .rate = RATE_RANGES(80, 3095)},
+	{ .code = MEDIA_BUS_FMT_SGBRG12_1X12,	.bpp = 12,
+	  .rate = RATE_RANGES(80, 3095)},
+	{ .code = MEDIA_BUS_FMT_SBGGR12_1X12,	.bpp = 12,
+	  .rate = RATE_RANGES(80, 3095)},
+	{ .code = MEDIA_BUS_FMT_SRGGB14_1X14,	.bpp = 14,
+	  .rate = RATE_RANGES(80, 3584)},
+	{ .code = MEDIA_BUS_FMT_SGRBG14_1X14,	.bpp = 14,
+	  .rate = RATE_RANGES(80, 3584)},
+	{ .code = MEDIA_BUS_FMT_SGBRG14_1X14,	.bpp = 14,
+	  .rate = RATE_RANGES(80, 3584)},
+	{ .code = MEDIA_BUS_FMT_SBGGR14_1X14,	.bpp = 14,
+	  .rate = RATE_RANGES(80, 3584)},
+	{ .code = MEDIA_BUS_FMT_SRGGB16_1X16,	.bpp = 16,
+	  .rate = RATE_RANGES(80, 4000)},
+	{ .code = MEDIA_BUS_FMT_SGRBG16_1X16,	.bpp = 16,
+	  .rate = RATE_RANGES(80, 4000)},
+	{ .code = MEDIA_BUS_FMT_SGBRG16_1X16,	.bpp = 16,
+	  .rate = RATE_RANGES(80, 4000)},
+	{ .code = MEDIA_BUS_FMT_SBGGR16_1X16,	.bpp = 16,
+	  .rate = RATE_RANGES(80, 4000)},
+};
+
+static const struct rzg2l_csi2_format rzv2h_csi2_formats[] = {
+	{ .code = MEDIA_BUS_FMT_UYVY8_1X16,	.bpp = 16,
+	  .rate = RATE_RANGES(80, 8400)},
+	{ .code = MEDIA_BUS_FMT_YUYV8_1X16,	.bpp = 16,
+	  .rate = RATE_RANGES(80, 8400)},
+	{ .code = MEDIA_BUS_FMT_RGB565_2X8_LE,	.bpp = 16,
+	  .rate = RATE_RANGES(80, 8400)},
+	{ .code = MEDIA_BUS_FMT_YUYV10_2X10,	.bpp = 20,
+	  .rate = RATE_RANGES(80, 8400)},
+	{ .code = MEDIA_BUS_FMT_RGB888_1X24,	.bpp = 24,
+	  .rate = RATE_RANGES(80, 8400)},
+	{ .code = MEDIA_BUS_FMT_SBGGR8_1X8,	.bpp = 8,
+	  .rate = RATE_RANGES(80, 5040)},
+	{ .code = MEDIA_BUS_FMT_SGBRG8_1X8,	.bpp = 8,
+	  .rate = RATE_RANGES(80, 5040)},
+	{ .code = MEDIA_BUS_FMT_SGRBG8_1X8,	.bpp = 8,
+	  .rate = RATE_RANGES(80, 5040)},
+	{ .code = MEDIA_BUS_FMT_SRGGB8_1X8,	.bpp = 8,
+	  .rate = RATE_RANGES(80, 5040)},
+	{ .code = MEDIA_BUS_FMT_SRGGB10_1X10,	.bpp = 10,
+	  .rate = RATE_RANGES(80, 6203)},
+	{ .code = MEDIA_BUS_FMT_SGRBG10_1X10,	.bpp = 10,
+	  .rate = RATE_RANGES(80, 6203)},
+	{ .code = MEDIA_BUS_FMT_SGBRG10_1X10,	.bpp = 10,
+	  .rate = RATE_RANGES(80, 6203)},
+	{ .code = MEDIA_BUS_FMT_SBGGR10_1X10,	.bpp = 10,
+	  .rate = RATE_RANGES(80, 6203)},
+	{ .code = MEDIA_BUS_FMT_SRGGB12_1X12,	.bpp = 12,
+	  .rate = RATE_RANGES(80, 7331)},
+	{ .code = MEDIA_BUS_FMT_SGRBG12_1X12,	.bpp = 12,
+	  .rate = RATE_RANGES(80, 7331)},
+	{ .code = MEDIA_BUS_FMT_SGBRG12_1X12,	.bpp = 12,
+	  .rate = RATE_RANGES(80, 7331)},
+	{ .code = MEDIA_BUS_FMT_SBGGR12_1X12,	.bpp = 12,
+	  .rate = RATE_RANGES(80, 7331)},
+	{ .code = MEDIA_BUS_FMT_SRGGB14_1X14,	.bpp = 14,
+	  .rate = RATE_RANGES(80, 8400)},
+	{ .code = MEDIA_BUS_FMT_SGRBG14_1X14,	.bpp = 14,
+	  .rate = RATE_RANGES(80, 8400)},
+	{ .code = MEDIA_BUS_FMT_SGBRG14_1X14,	.bpp = 14,
+	  .rate = RATE_RANGES(80, 8400)},
+	{ .code = MEDIA_BUS_FMT_SBGGR14_1X14,	.bpp = 14,
+	  .rate = RATE_RANGES(80, 8400)},
+	{ .code = MEDIA_BUS_FMT_SRGGB16_1X16,	.bpp = 16,
+	  .rate = RATE_RANGES(80, 8400)},
+	{ .code = MEDIA_BUS_FMT_SGRBG16_1X16,	.bpp = 16,
+	  .rate = RATE_RANGES(80, 8400)},
+	{ .code = MEDIA_BUS_FMT_SGBRG16_1X16,	.bpp = 16,
+	  .rate = RATE_RANGES(80, 8400)},
+	{ .code = MEDIA_BUS_FMT_SBGGR16_1X16,	.bpp = 16,
+	  .rate = RATE_RANGES(80, 8400)},
 };
 
 static inline struct rzg2l_csi2 *sd_to_csi2(struct v4l2_subdev *sd)
@@ -259,13 +372,14 @@ static inline struct rzg2l_csi2 *sd_to_csi2(struct v4l2_subdev *sd)
 	return container_of(sd, struct rzg2l_csi2, subdev);
 }
 
-static const struct rzg2l_csi2_format *rzg2l_csi2_code_to_fmt(unsigned int code)
+static const struct rzg2l_csi2_format *rzg2l_csi2_code_to_fmt(unsigned int code,
+							      struct rzg2l_csi2 *csi2)
 {
 	unsigned int i;
 
-	for (i = 0; i < ARRAY_SIZE(rzg2l_csi2_formats); i++)
-		if (rzg2l_csi2_formats[i].code == code)
-			return &rzg2l_csi2_formats[i];
+	for (i = 0; i < csi2->info->num_formats; i++)
+		if (csi2->info->format[i].code == code)
+			return &csi2->info->format[i];
 
 	return NULL;
 }
@@ -311,14 +425,14 @@ static int rzg2l_csi2_calc_mbps(struct rzg2l_csi2 *csi2)
 
 	remote_pad = media_pad_remote_pad_unique(&csi2->pads[RZG2L_CSI2_SINK]);
 	if (IS_ERR(remote_pad)) {
-		dev_err(csi2->dev, "can't get source pad of %s (%ld)\n",
-			csi2->remote_source->name, PTR_ERR(remote_pad));
+		dev_err(csi2->dev, "can't get source pad of %s (%pe)\n",
+			csi2->remote_source->name, remote_pad);
 		return PTR_ERR(remote_pad);
 	}
 
 	state = v4l2_subdev_lock_and_get_active_state(&csi2->subdev);
 	fmt = v4l2_subdev_state_get_format(state, RZG2L_CSI2_SINK);
-	format = rzg2l_csi2_code_to_fmt(fmt->code);
+	format = rzg2l_csi2_code_to_fmt(fmt->code, csi2);
 	v4l2_subdev_unlock_state(state);
 
 	/* Read the link frequency from remote subdevice. */
@@ -331,6 +445,12 @@ static int rzg2l_csi2_calc_mbps(struct rzg2l_csi2 *csi2)
 
 	mbps = ret * 2;
 	do_div(mbps, 1000000);
+
+	/* Validate Mbps with the minimum and maximum transfer data rates */
+	if ((mbps < format->rate.min) || ((mbps * csi2->lanes) > format->rate.max)) {
+		dev_err(csi2->dev, "unsupported transfer rate %lld\n", mbps);
+		return -EINVAL;
+	}
 
 	return mbps;
 }
@@ -426,6 +546,12 @@ static const struct rzg2l_csi2_info rzg2l_csi2_info = {
 	.dphy_enable = rzg2l_csi2_dphy_enable,
 	.dphy_disable = rzg2l_csi2_dphy_disable,
 	.has_system_clk = true,
+	.format = rzg2l_csi2_formats,
+	.num_formats = ARRAY_SIZE(rzg2l_csi2_formats),
+	.min_width = 320,
+	.min_height = 240,
+	.max_width = 2800,
+	.max_height = 4095,
 };
 
 static int rzg2l_csi2_dphy_setting(struct v4l2_subdev *sd, bool on)
@@ -550,6 +676,12 @@ static const struct rzg2l_csi2_info rzv2h_csi2_info = {
 	.dphy_enable = rzv2h_csi2_dphy_enable,
 	.dphy_disable = rzv2h_csi2_dphy_disable,
 	.has_system_clk = false,
+	.format = rzv2h_csi2_formats,
+	.num_formats = ARRAY_SIZE(rzv2h_csi2_formats),
+	.min_width = 320,
+	.min_height = 240,
+	.max_width = 4096,
+	.max_height = 4096,
 };
 
 static int rzg2l_csi2_mipi_link_setting(struct v4l2_subdev *sd, bool on)
@@ -641,6 +773,7 @@ static int rzg2l_csi2_set_format(struct v4l2_subdev *sd,
 {
 	struct v4l2_mbus_framefmt *src_format;
 	struct v4l2_mbus_framefmt *sink_format;
+	struct rzg2l_csi2 *csi2 = sd_to_csi2(sd);
 
 	src_format = v4l2_subdev_state_get_format(state, RZG2L_CSI2_SOURCE);
 	if (fmt->pad == RZG2L_CSI2_SOURCE) {
@@ -650,8 +783,8 @@ static int rzg2l_csi2_set_format(struct v4l2_subdev *sd,
 
 	sink_format = v4l2_subdev_state_get_format(state, RZG2L_CSI2_SINK);
 
-	if (!rzg2l_csi2_code_to_fmt(fmt->format.code))
-		sink_format->code = rzg2l_csi2_formats[0].code;
+	if (!rzg2l_csi2_code_to_fmt(fmt->format.code, csi2))
+		sink_format->code = csi2->info->format[0].code;
 	else
 		sink_format->code = fmt->format.code;
 
@@ -661,9 +794,11 @@ static int rzg2l_csi2_set_format(struct v4l2_subdev *sd,
 	sink_format->ycbcr_enc = fmt->format.ycbcr_enc;
 	sink_format->quantization = fmt->format.quantization;
 	sink_format->width = clamp_t(u32, fmt->format.width,
-				     RZG2L_CSI2_MIN_WIDTH, RZG2L_CSI2_MAX_WIDTH);
+				     csi2->info->min_width,
+				     csi2->info->max_width);
 	sink_format->height = clamp_t(u32, fmt->format.height,
-				      RZG2L_CSI2_MIN_HEIGHT, RZG2L_CSI2_MAX_HEIGHT);
+				      csi2->info->min_height,
+				      csi2->info->max_height);
 	fmt->format = *sink_format;
 
 	/* propagate format to source pad */
@@ -672,13 +807,14 @@ static int rzg2l_csi2_set_format(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int rzg2l_csi2_init_state(struct v4l2_subdev *sd,
-				 struct v4l2_subdev_state *sd_state)
+static int rzg2l_csi2_init_config(struct v4l2_subdev *sd,
+				  struct v4l2_subdev_state *sd_state)
 {
 	struct v4l2_subdev_format fmt = { .pad = RZG2L_CSI2_SINK, };
+	struct rzg2l_csi2 *csi2 = sd_to_csi2(sd);
 
-	fmt.format.width = RZG2L_CSI2_DEFAULT_WIDTH;
-	fmt.format.height = RZG2L_CSI2_DEFAULT_HEIGHT;
+	fmt.format.width = csi2->info->min_width;
+	fmt.format.height = csi2->info->min_height;
 	fmt.format.field = V4L2_FIELD_NONE;
 	fmt.format.code = RZG2L_CSI2_DEFAULT_FMT;
 	fmt.format.colorspace = V4L2_COLORSPACE_SRGB;
@@ -693,10 +829,12 @@ static int rzg2l_csi2_enum_mbus_code(struct v4l2_subdev *sd,
 				     struct v4l2_subdev_state *sd_state,
 				     struct v4l2_subdev_mbus_code_enum *code)
 {
-	if (code->index >= ARRAY_SIZE(rzg2l_csi2_formats))
+	struct rzg2l_csi2 *csi2 = sd_to_csi2(sd);
+
+	if (code->index >= csi2->info->num_formats)
 		return -EINVAL;
 
-	code->code = rzg2l_csi2_formats[code->index].code;
+	code->code = csi2->info->format[code->index].code;
 
 	return 0;
 }
@@ -705,16 +843,18 @@ static int rzg2l_csi2_enum_frame_size(struct v4l2_subdev *sd,
 				      struct v4l2_subdev_state *sd_state,
 				      struct v4l2_subdev_frame_size_enum *fse)
 {
+	struct rzg2l_csi2 *csi2 = sd_to_csi2(sd);
+
 	if (fse->index != 0)
 		return -EINVAL;
 
-	if (!rzg2l_csi2_code_to_fmt(fse->code))
+	if (!rzg2l_csi2_code_to_fmt(fse->code, csi2))
 		return -EINVAL;
 
-	fse->min_width = RZG2L_CSI2_MIN_WIDTH;
-	fse->min_height = RZG2L_CSI2_MIN_HEIGHT;
-	fse->max_width = RZG2L_CSI2_MAX_WIDTH;
-	fse->max_height = RZG2L_CSI2_MAX_HEIGHT;
+	fse->min_width = csi2->info->min_width;
+	fse->min_height = csi2->info->min_height;
+	fse->max_width = csi2->info->max_width;
+	fse->max_height = csi2->info->max_height;
 
 	return 0;
 }
@@ -730,8 +870,8 @@ static int rzg2l_csi2_get_frame_desc(struct v4l2_subdev *sd, unsigned int pad,
 
 	remote_pad = media_pad_remote_pad_unique(&csi2->pads[RZG2L_CSI2_SINK]);
 	if (IS_ERR(remote_pad)) {
-		dev_err(csi2->dev, "can't get source pad of %s (%ld)\n",
-			csi2->remote_source->name, PTR_ERR(remote_pad));
+		dev_err(csi2->dev, "can't get source pad of %s (%pe)\n",
+			csi2->remote_source->name, remote_pad);
 		return PTR_ERR(remote_pad);
 	}
 	return v4l2_subdev_call(csi2->remote_source, pad, get_frame_desc,
@@ -752,13 +892,13 @@ static const struct v4l2_subdev_pad_ops rzg2l_csi2_pad_ops = {
 	.get_frame_desc = rzg2l_csi2_get_frame_desc,
 };
 
+static const struct v4l2_subdev_internal_ops rzg2l_csi2_internal_ops = {
+	.init_state = rzg2l_csi2_init_config,
+};
+
 static const struct v4l2_subdev_ops rzg2l_csi2_subdev_ops = {
 	.video	= &rzg2l_csi2_video_ops,
 	.pad	= &rzg2l_csi2_pad_ops,
-};
-
-static const struct v4l2_subdev_internal_ops rzg2l_csi2_internal_ops = {
-	.init_state = rzg2l_csi2_init_state,
 };
 
 /* -----------------------------------------------------------------------------
@@ -770,15 +910,30 @@ static int rzg2l_csi2_notify_bound(struct v4l2_async_notifier *notifier,
 				   struct v4l2_async_connection *asd)
 {
 	struct rzg2l_csi2 *csi2 = notifier_to_csi2(notifier);
+	int ret;
 
-	csi2->remote_source = subdev;
+
+	if (!device_link_add(csi2->dev, subdev->dev, DL_FLAG_STATELESS)) {
+		dev_err(csi2->dev, "Failed to create device link to sensor %s\n",
+			subdev->name);
+		return -EINVAL;
+	}
 
 	dev_dbg(csi2->dev, "Bound subdev: %s pad\n", subdev->name);
 
-	return media_create_pad_link(&subdev->entity, RZG2L_CSI2_SINK,
-				     &csi2->subdev.entity, 0,
-				     MEDIA_LNK_FL_ENABLED |
-				     MEDIA_LNK_FL_IMMUTABLE);
+
+	ret = media_create_pad_link(&subdev->entity, RZG2L_CSI2_SINK,
+				    &csi2->subdev.entity, 0,
+				    MEDIA_LNK_FL_ENABLED |
+				    MEDIA_LNK_FL_IMMUTABLE);
+	if (ret) {
+		device_link_remove(csi2->dev, subdev->dev);
+		return ret;
+	}
+
+	csi2->remote_source = subdev;
+
+	return 0;
 }
 
 static void rzg2l_csi2_notify_unbind(struct v4l2_async_notifier *notifier,
@@ -787,6 +942,7 @@ static void rzg2l_csi2_notify_unbind(struct v4l2_async_notifier *notifier,
 {
 	struct rzg2l_csi2 *csi2 = notifier_to_csi2(notifier);
 
+	device_link_remove(csi2->dev, subdev->dev);
 	csi2->remote_source = NULL;
 
 	dev_dbg(csi2->dev, "Unbind subdev %s\n", subdev->name);
@@ -932,11 +1088,10 @@ static int rzg2l_csi2_probe(struct platform_device *pdev)
 	if (IS_ERR(csi2->vclk))
 		return dev_err_probe(dev, PTR_ERR(csi2->vclk),
 				     "Failed to get video clock\n");
+
 	csi2->vclk_rate = clk_get_rate(csi2->vclk);
 
 	csi2->dev = dev;
-
-	csi2->info = of_device_get_match_data(&pdev->dev);
 
 	platform_set_drvdata(pdev, csi2);
 
@@ -955,7 +1110,7 @@ static int rzg2l_csi2_probe(struct platform_device *pdev)
 	csi2->subdev.dev = dev;
 	v4l2_subdev_init(&csi2->subdev, &rzg2l_csi2_subdev_ops);
 	csi2->subdev.internal_ops = &rzg2l_csi2_internal_ops;
-	v4l2_set_subdevdata(&csi2->subdev, dev);
+	v4l2_set_subdevdata(&csi2->subdev, &pdev->dev);
 	snprintf(csi2->subdev.name, sizeof(csi2->subdev.name),
 		 "csi-%s", dev_name(dev));
 	csi2->subdev.flags = V4L2_SUBDEV_FL_HAS_DEVNODE;
@@ -1039,16 +1194,12 @@ static const struct of_device_id rzg2l_csi2_of_table[] = {
 		.compatible = "renesas,rzg2l-csi2",
 		.data = &rzg2l_csi2_info,
 	},
-	{
-		.compatible = "renesas,rzg3e-csi2",
-		.data = &rzv2h_csi2_info,
-	},
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, rzg2l_csi2_of_table);
 
 static struct platform_driver rzg2l_csi2_pdrv = {
-	.remove = rzg2l_csi2_remove,
+	.remove	= rzg2l_csi2_remove,
 	.probe	= rzg2l_csi2_probe,
 	.driver	= {
 		.name = "rzg2l-csi2",
