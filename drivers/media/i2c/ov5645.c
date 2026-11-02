@@ -1072,6 +1072,14 @@ static int ov5645_probe(struct i2c_client *client)
 		return dev_err_probe(dev, PTR_ERR(ov5645->rst_gpio),
 				     "cannot get reset gpio\n");
 
+	/*
+	 * init_state() only initialises the TRY format, so set the default
+	 * ACTIVE mode here to match it. Otherwise current_mode stays NULL until
+	 * userspace issues an ACTIVE set_fmt on the sensor pad, and streaming
+	 * dereferences it.
+	 */
+	ov5645->current_mode = &ov5645_mode_info_data[1];
+
 	v4l2_ctrl_handler_init(&ov5645->ctrls, 9);
 	v4l2_ctrl_new_std(&ov5645->ctrls, &ov5645_ctrl_ops,
 			  V4L2_CID_SATURATION, -4, 4, 1, 0);
@@ -1093,12 +1101,14 @@ static int ov5645_probe(struct i2c_client *client)
 	ov5645->pixel_clock = v4l2_ctrl_new_std(&ov5645->ctrls,
 						&ov5645_ctrl_ops,
 						V4L2_CID_PIXEL_RATE,
-						1, INT_MAX, 1, 1);
+						1, INT_MAX, 1,
+						ov5645->current_mode->pixel_clock);
 	ov5645->link_freq = v4l2_ctrl_new_int_menu(&ov5645->ctrls,
 						   &ov5645_ctrl_ops,
 						   V4L2_CID_LINK_FREQ,
 						   ARRAY_SIZE(link_freq) - 1,
-						   0, link_freq);
+						   ov5645->current_mode->link_freq,
+						   link_freq);
 	if (ov5645->link_freq)
 		ov5645->link_freq->flags |= V4L2_CTRL_FLAG_READ_ONLY;
 

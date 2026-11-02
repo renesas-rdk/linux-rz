@@ -8,6 +8,7 @@
 /dts-v1/;
 #include "r9a09g057.dtsi"
 #include "r9a09g057-multi-os.dtsi"
+#include "r9a09g057-multi-os-rproc.dtsi"
 #include <dt-bindings/pinctrl/rzv2h-pinctrl.h>
 #include <dt-bindings/gpio/gpio.h>
 #include "imdt-v2-sbc.dtsi"
